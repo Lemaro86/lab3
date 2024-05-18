@@ -20,10 +20,30 @@ class AuthUser(models.Model):
         managed = False
         db_table = 'auth_user'
 
-class Stock(models.Model):
-    company_name = models.CharField(max_length=50, verbose_name="Название компании")
-    price = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Цена акции")
-    is_growing = models.BooleanField(verbose_name="Растет ли акция в цене?")
-    date_modified = models.DateTimeField(auto_now=True, verbose_name="Когда последний раз обновлялось значение акции?")
-    url = models.CharField(max_length=255, blank=True, null=True, verbose_name="Фото логотипа компании")
-    user = models.ForeignKey('AuthUser', on_delete=models.DO_NOTHING, null=True, blank=False, verbose_name="Создатель акции")
+
+class Service(models.Model):
+    title = models.TextField(max_length=255, verbose_name="Название услуги")
+    description = models.TextField(max_length=255, verbose_name="Описание услуги")
+    url = models.CharField(max_length=255, blank=True, null=True, verbose_name="Фото услуги")
+    cost = models.DecimalField(max_digits=8, decimal_places=2, verbose_name="Цена услуги")
+
+    def __str__(self):
+        return f'{self.title} -- {self.cost}'
+
+
+class Order(models.Model):
+    order_id = models.IntegerField(primary_key=True)
+    status = models.TextField(max_length=50, verbose_name="Статус заявки")
+    created = models.DateTimeField(auto_now=True, verbose_name="Дата создания заявки")
+    activated = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата активации заявки")
+    completed = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата завершения заявки")
+    creator_id = models.IntegerField(verbose_name="Создатель заявки")
+    moderator_id = models.IntegerField(verbose_name="Модератор услуг")
+
+# class OrderEvent(models.Model):
+#     order_id = models.ForeignKey('Order', on_delete=models.DO_NOTHING, verbose_name="Идентификатор заявки"),
+#     service_id = models.ForeignKey('Service', on_delete=models.DO_NOTHING, verbose_name="Идентификатор Услуги"),
+#
+#     class Meta:
+#         managed = False
+#         db_table = 'order_event'

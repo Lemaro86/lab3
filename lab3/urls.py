@@ -23,9 +23,11 @@ router = routers.DefaultRouter()
 
 urlpatterns = [
     path('', include(router.urls)),
-    path(r'stocks/', views.StockList.as_view(), name='stocks-list'),
-    path(r'stocks/<int:pk>/', views.StockDetail.as_view(), name='stocks-detail'),
-    path(r'stocks/<int:pk>/put/', views.put_detail, name='stocks-put'),
+    path(r'service/', views.ServiceList.as_view(), name='service-list'),
+    path(r'service/<int:pk>/', views.ServiceDetail.as_view(), name='service-detail'),
+    path(r'service/<int:pk>/put/', views.put_detail_service, name='service-put'),
+    path(r'order/', views.OrderList.as_view(), name='order-list'),
+    path(r'order/<int:pk>/', views.OrderDetail.as_view(), name='order-detail'),
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
     path('admin/', admin.site.urls),
     path(r'users/', views.UsersList.as_view(), name='users-list'),
