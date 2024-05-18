@@ -78,6 +78,7 @@ TEMPLATES = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # add here repo from github pages
 ]
 
 WSGI_APPLICATION = 'lab3.wsgi.application'
