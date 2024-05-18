@@ -34,7 +34,11 @@ class ServiceList(APIView):
     serializer_class = ServiceSerializer
 
     def get(self, request, format=None):
-        service = self.model_class.objects.all()
+        title = request.GET.get('title')
+        if title and title != '':
+            service = self.model_class.objects.filter(title__contains=title)
+        else:
+            service = self.model_class.objects.all()
         serializer = self.serializer_class(service, many=True)
         return Response(serializer.data)
 
