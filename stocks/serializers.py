@@ -1,21 +1,29 @@
-from stocks.models import AuthUser
 from rest_framework import serializers
 from stocks.models import Service
 from stocks.models import Order
+from collections import OrderedDict
+from stocks.models import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
-    # stock_set = StockSerializer(many=True, read_only=True)
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
 
     class Meta:
-        model = AuthUser
-        fields = ["id", "first_name", "last_name"]
-
+        model = CustomUser
+        fields = ['email', 'password', 'is_staff', 'is_superuser']
 
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
         fields = ["pk", "title", "description", "url", "cost"]
+
+    def get_fields(self):
+        new_fields = OrderedDict()
+        for name, field in super().get_fields().items():
+            field.required = False
+            new_fields[name] = field
+        return new_fields
 
 
 class OrderSerializer(serializers.ModelSerializer):
