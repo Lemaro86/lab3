@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 
 from stocks.permissions import IsAdmin, IsManager
-from stocks.serializers import  UserSerializer, ServiceSerializer, OrderSerializer
+from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer
 from stocks.minio import add_pic
 from stocks.models import Service
 from stocks.models import Order
@@ -18,6 +18,13 @@ from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
+from django.conf import settings
+import redis
+import uuid
+import json
+
+session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
+
 
 def method_permission_classes(classes):
     def decorator(func):
@@ -25,7 +32,9 @@ def method_permission_classes(classes):
             self.permission_classes = classes
             self.check_permissions(self.request)
             return func(self, *args, **kwargs)
+
         return decorated_func
+
     return decorator
 
 
@@ -35,13 +44,18 @@ def method_permission_classes(classes):
 @swagger_auto_schema(method='post', request_body=UserSerializer)
 @api_view(['Post'])
 def login_view(request):
-    print(request.data["email"])
     email = request.data["email"]
     password = request.data["password"]
     user = authenticate(request, email=email, password=password)
     if user is not None:
+        random_key = str(uuid.uuid4())
+        session_storage.set(random_key, email)
+
         login(request, user)
-        return HttpResponse("{'status': 'ok'}")
+        response = HttpResponse("{'status': 'ok'}")
+        response.set_cookie("session_id", random_key)
+
+        return response
     else:
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
@@ -122,16 +136,26 @@ class ServiceDetail(APIView):
     @method_permission_classes((IsAdmin,))
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def put(self, request, pk, format=None):
-        service = get_object_or_404(self.model_class, pk=pk)
-        serializer = self.serializer_class(service, data=request.data, partial=True)
-        if 'pic' in serializer.initial_data:
-            pic_result = add_pic(service, serializer.initial_data['pic'])
-            if 'error' in pic_result.data:
-                return pic_result
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if 'session_id' in request.COOKIES.keys():
+            ssid = request.COOKIES["session_id"]
+            session = session_storage.get(ssid)
+            session_str = session.decode('utf-8')
+            user_info = CustomUser.objects.filter(email__contains=session_str)
+            if user_info.exists() and user_info[0].is_superuser:
+                service = get_object_or_404(self.model_class, pk=pk)
+                serializer = self.serializer_class(service, data=request.data, partial=True)
+                if 'pic' in serializer.initial_data:
+                    pic_result = add_pic(service, serializer.initial_data['pic'])
+                    if 'error' in pic_result.data:
+                        return pic_result
+                if serializer.is_valid():
+                    serializer.save()
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
+        else:
+            return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
 
     @method_permission_classes((IsAdmin,))
     def delete(self, request, pk, format=None):

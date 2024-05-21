@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'drf_yasg',
     'rest_framework_swagger',
+    'redis'
 ]
 
 MIDDLEWARE = [
@@ -153,3 +154,6 @@ REST_FRAMEWORK = {
 }
 
 AUTH_USER_MODEL = "stocks.CustomUser"
+
+REDIS_HOST = '0.0.0.0'
+REDIS_PORT = 6379
