@@ -42,8 +42,8 @@ class Order(models.Model):
     created = models.DateTimeField(auto_now=True, verbose_name="Дата создания заявки")
     activated = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата активации заявки")
     completed = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата завершения заявки")
-    creator_id = models.IntegerField(verbose_name="Создатель заявки")
-    moderator_id = models.IntegerField(verbose_name="Модератор услуг")
+    creator_id = models.IntegerField(verbose_name="Создатель заявки", null=True)
+    moderator_id = models.IntegerField(verbose_name="Модератор услуг", null=True)
 
 # class OrderEvent(models.Model):
 #     order_id = models.ForeignKey('Order', on_delete=models.DO_NOTHING, verbose_name="Идентификатор заявки"),

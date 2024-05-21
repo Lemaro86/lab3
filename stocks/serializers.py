@@ -28,6 +28,7 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(serializers.ModelSerializer):
     # service_set = ServiceSerializer(read_only=True)
+    # status: created, activated, completed, declined
 
     class Meta:
         model = Order
