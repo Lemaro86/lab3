@@ -10,12 +10,13 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 
 from stocks.permissions import IsAdmin, IsManager, IsUser
-from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer
+from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer, UserRoleSerializer
 from stocks.minio import add_pic
 from stocks.models import Service
 from stocks.models import Order
 from stocks.models import CustomUser
 from drf_yasg.utils import swagger_auto_schema
+from drf_yasg import openapi
 from django.contrib.auth import authenticate, login, logout
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -55,7 +56,9 @@ def login_view(request):
         session_storage.set(random_key, email)
 
         login(request, user)
-        response = HttpResponse("{'status': 'ok'}")
+        user_item = CustomUser.objects.get(email=email)
+        serializer = UserRoleSerializer(user_item)
+        response = Response(serializer.data)
         response.set_cookie("session_id", random_key)
 
         return response
@@ -63,6 +66,10 @@ def login_view(request):
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
 
+@swagger_auto_schema(method='get')
+@api_view(['Get'])
+@permission_classes([AllowAny])
+@authentication_classes([])
 def logout_view(request):
     logout(request._request)
     return Response({'status': 'Success'})
@@ -79,7 +86,6 @@ class UserViewSet(viewsets.ModelViewSet):
             return Response({'status': 'Exist'}, status=400)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            print(serializer.data)
             self.model_class.objects.create_user(email=serializer.data['email'],
                                                  password=serializer.data['password'],
                                                  is_superuser=serializer.data['is_superuser'],
@@ -102,6 +108,9 @@ class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
 
+    get_response = openapi.Response('Get service list', serializer_class(many=True))
+
+    @swagger_auto_schema(responses={200: get_response})
     def get(self, request, format=None):
         title = request.GET.get('title')
         if title and title != '':
@@ -111,7 +120,7 @@ class ServiceList(APIView):
         serializer = self.serializer_class(service, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=ServiceSerializer)
+    @swagger_auto_schema(request_body=ServiceSerializer, responses={200: ServiceSerializer})
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
@@ -185,7 +194,9 @@ class OrderList(APIView):
     permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
+    get_response = openapi.Response('Get order list', serializer_class(many=True))
 
+    @swagger_auto_schema(responses={200: get_response})
     @method_permission_classes([IsUser, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, format=None):
@@ -211,10 +222,12 @@ class OrderList(APIView):
 
 
 class OrderDetail(APIView):
-    permission_classes = [IsAuthenticated]
+    # permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
+    get_response = openapi.Response('Get order by id', serializer_class())
 
+    @swagger_auto_schema(responses={200: get_response})
     @method_permission_classes([IsAdmin, IsManager, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, pk, format=None):
@@ -222,6 +235,7 @@ class OrderDetail(APIView):
         serializer = self.serializer_class(order)
         return Response(serializer.data)
 
+    @swagger_auto_schema(request_body=OrderSerializer, responses={200: get_response})
     @method_permission_classes([IsAdmin, IsManager, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def put(self, request, pk, format=None):

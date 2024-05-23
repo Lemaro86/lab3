@@ -27,9 +27,15 @@ class ServiceSerializer(serializers.ModelSerializer):
 
 
 class OrderSerializer(serializers.ModelSerializer):
-    # service_set = ServiceSerializer(read_only=True)
     # status: created, activated, completed, declined
 
     class Meta:
         model = Order
         fields = ["order_id", "status", "created", "activated", "completed", "creator_id",  "moderator_id"]
+
+
+class UserRoleSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = CustomUser
+        fields = ["is_staff", "is_superuser"]
