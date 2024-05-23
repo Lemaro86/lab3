@@ -59,6 +59,8 @@ def login_view(request):
         user_item = CustomUser.objects.get(email=email)
         serializer = UserRoleSerializer(user_item)
         response = Response(serializer.data)
+        response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = 'Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, credentials'
         response.set_cookie("session_id", random_key)
 
         return response
@@ -72,7 +74,11 @@ def login_view(request):
 @authentication_classes([])
 def logout_view(request):
     logout(request._request)
-    return Response({'status': 'Success'})
+    response = Response({'status': 'Success'})
+    response.delete_cookie('session_id')
+    response.delete_cookie('sessionid')
+    response.delete_cookie('X-CSRF-Token')
+    return response
 
 
 @permission_classes([AllowAny])

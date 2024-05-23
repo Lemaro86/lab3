@@ -13,14 +13,3 @@ GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 
 ALTER TABLE public.stocks_customuser
 ALTER COLUMN password TYPE VARCHAR(254);
-
-      export const updateOrderById = createAsyncThunk<Order, OrderRequest>('updateOrder',
-    async (data) => api.order.orderUpdate(String(data.id), data.data, {
-        withCredentials: true,
-        headers: {
-            'X-CSRFToken': document.cookie
-                .split('; ')
-                .filter(row => row.startsWith('csrftoken='))
-                .map(c => c.split('=')[1])[0],
-        },
-    }).then(({data}) => data));
