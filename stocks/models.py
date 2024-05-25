@@ -37,7 +37,6 @@ class Service(models.Model):
 
 
 class Order(models.Model):
-    order_id = models.IntegerField(primary_key=True)
     status = models.TextField(max_length=50, verbose_name="Статус заявки")
     created = models.DateTimeField(auto_now=True, verbose_name="Дата создания заявки")
     activated = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата активации заявки")
@@ -45,10 +44,7 @@ class Order(models.Model):
     creator_id = models.IntegerField(verbose_name="Создатель заявки", null=True)
     moderator_id = models.IntegerField(verbose_name="Модератор услуг", null=True)
 
-# class OrderEvent(models.Model):
-#     order_id = models.ForeignKey('Order', on_delete=models.DO_NOTHING, verbose_name="Идентификатор заявки"),
-#     service_id = models.ForeignKey('Service', on_delete=models.DO_NOTHING, verbose_name="Идентификатор Услуги"),
-#
-#     class Meta:
-#         managed = False
-#         db_table = 'order_event'
+
+class OrderEvent(models.Model):
+    ord = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Ид заявки", null=True),
+    serv = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="Ид услуги", null=True),

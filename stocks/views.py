@@ -10,7 +10,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import status
 
 from stocks.permissions import IsAdmin, IsManager, IsUser
-from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer, UserRoleSerializer
+from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer, UserRoleSerializer, \
+    OrderEventSerializer
 from stocks.minio import add_pic
 from stocks.models import Service
 from stocks.models import Order
@@ -60,7 +61,8 @@ def login_view(request):
         serializer = UserRoleSerializer(user_item)
         response = Response(serializer.data)
         response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response["Access-Control-Allow-Headers"] = 'Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, credentials'
+        response[
+            "Access-Control-Allow-Headers"] = 'Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, credentials'
         response.set_cookie("session_id", random_key)
 
         return response
@@ -200,6 +202,7 @@ class OrderList(APIView):
     permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
+    serializer_event_class = OrderEventSerializer
     get_response = openapi.Response('Get order list', serializer_class(many=True))
 
     @swagger_auto_schema(responses={200: get_response})
@@ -214,15 +217,35 @@ class OrderList(APIView):
         serializer = self.serializer_class(order, many=True)
         return Response(serializer.data)
 
+    @swagger_auto_schema(request_body=openapi.Schema(
+        type=openapi.TYPE_OBJECT,
+        properties={
+            "status": openapi.Schema(
+                type=openapi.TYPE_STRING, description="ACTIVATED DRAFT COMPLETED DECLINED DELETED",
+            ),
+            "service_id": openapi.Schema(
+                type=openapi.TYPE_NUMBER, description="Primary key of service"
+            ),
+        },
+    ), responses={200: get_response})
     @method_permission_classes([IsUser, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def post(self, request, format=None):
         user = cookie_to_email(self, request)
         creator_id = user.pk
+        service_id = request.data["service_id"]
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
             order = serializer.save(creator_id=creator_id)
             order.save()
+            serializer_event = self.serializer_event_class(data={'ord': serializer.data, 'serv': service_id})
+            if serializer_event.is_valid():
+                order_event = serializer_event.save()
+                order_event.save()
+            else:
+                print(serializer.errors)
+                print(serializer.error_messages)
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

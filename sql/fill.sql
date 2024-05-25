@@ -8,6 +8,13 @@ CREATE TABLE public.stocks_customuser
     last_login TIMESTAMP
 )
 
+CREATE TABLE public.stocks_orderevent
+(
+    id  SERIAL NOT NULL PRIMARY KEY,
+    serv  INTEGER,
+    ord  INTEGER
+);
+
 GRANT ALL ON ALL TABLES IN SCHEMA public to postgres;
 GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA public TO postgres;
 

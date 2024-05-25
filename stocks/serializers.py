@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from stocks.models import Service
+from stocks.models import Service, OrderEvent
 from stocks.models import Order
 from collections import OrderedDict
 from stocks.models import CustomUser
@@ -31,7 +31,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["order_id", "status", "created", "activated", "completed", "creator_id",  "moderator_id"]
+        fields = ["pk", "status", "created", "activated", "completed", "creator_id",  "moderator_id"]
 
 
 class UserRoleSerializer(serializers.ModelSerializer):
@@ -39,3 +39,10 @@ class UserRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ["is_staff", "is_superuser"]
+
+
+class OrderEventSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = OrderEvent
+        fields = ["ord", "serv"]
