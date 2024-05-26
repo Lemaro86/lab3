@@ -9,13 +9,10 @@ from rest_framework.authentication import SessionAuthentication, BaseAuthenticat
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 
-from stocks.permissions import IsAdmin, IsManager, IsUser
-from stocks.serializers import UserSerializer, ServiceSerializer, OrderSerializer, UserRoleSerializer, \
-    OrderEventSerializer
+from stocks.permissions import *
+from stocks.serializers import *
+from stocks.models import *
 from stocks.minio import add_pic
-from stocks.models import Service
-from stocks.models import Order
-from stocks.models import CustomUser
 from drf_yasg.utils import swagger_auto_schema
 from drf_yasg import openapi
 from django.contrib.auth import authenticate, login, logout
@@ -26,7 +23,6 @@ from django.conf import settings
 import redis
 import uuid
 from django.utils import timezone
-from django.db import models
 
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
@@ -202,8 +198,8 @@ class OrderList(APIView):
     permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
-    serializer_event_class = OrderEventSerializer
     get_response = openapi.Response('Get order list', serializer_class(many=True))
+    get_response_one = openapi.Response('Get order', serializer_class(many=False))
 
     @swagger_auto_schema(responses={200: get_response})
     @method_permission_classes([IsUser, ])
@@ -211,7 +207,7 @@ class OrderList(APIView):
     def get(self, request, format=None):
         user = cookie_to_email(self, request)
         if user and (user.is_staff or user.is_superuser):
-            order = self.model_class.objects.all()
+            order = self.model_class.objects.all().order_by('created')
         else:
             order = self.model_class.objects.filter(creator_id=user.pk)
         serializer = self.serializer_class(order, many=True)
@@ -227,7 +223,7 @@ class OrderList(APIView):
                 type=openapi.TYPE_NUMBER, description="Primary key of service"
             ),
         },
-    ), responses={200: get_response})
+    ), responses={200: get_response_one})
     @method_permission_classes([IsUser, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def post(self, request, format=None):
@@ -235,23 +231,15 @@ class OrderList(APIView):
         creator_id = user.pk
         service_id = request.data["service_id"]
         serializer = self.serializer_class(data=request.data)
+        service = Service.objects.get(pk=service_id)
         if serializer.is_valid():
             order = serializer.save(creator_id=creator_id)
-            order.save()
-            serializer_event = self.serializer_event_class(data={'ord': serializer.data, 'serv': service_id})
-            if serializer_event.is_valid():
-                order_event = serializer_event.save()
-                order_event.save()
-            else:
-                print(serializer.errors)
-                print(serializer.error_messages)
-
+            order.service.set([service])
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class OrderDetail(APIView):
-    # permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
     get_response = openapi.Response('Get order by id', serializer_class())

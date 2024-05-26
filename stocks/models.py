@@ -43,8 +43,4 @@ class Order(models.Model):
     completed = models.DateTimeField(null=True, auto_now=False, verbose_name="Дата завершения заявки")
     creator_id = models.IntegerField(verbose_name="Создатель заявки", null=True)
     moderator_id = models.IntegerField(verbose_name="Модератор услуг", null=True)
-
-
-class OrderEvent(models.Model):
-    ord = models.ForeignKey(Order, on_delete=models.CASCADE, verbose_name="Ид заявки", null=True),
-    serv = models.ForeignKey(Service, on_delete=models.CASCADE, verbose_name="Ид услуги", null=True),
+    service = models.ManyToManyField('Service', blank=True, related_name='service', null=True)
