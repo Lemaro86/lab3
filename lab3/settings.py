@@ -78,6 +78,7 @@ TEMPLATES = [
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    # "https://lemaro86.github.io"
     # add here repo from github pages
 ]
 
@@ -89,11 +90,11 @@ WSGI_APPLICATION = 'lab3.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'student',
+        'NAME': 'student3',
         'USER': 'postgres',
-        'PASSWORD': 'fhsbfnfdbfb34',
+        'PASSWORD': '123456',
         'HOST': 'localhost',
-        'PORT': 5432,
+        'PORT': 5444,
     }
 }
 
