@@ -245,7 +245,7 @@ class OrderDetail(APIView):
     get_response = openapi.Response('Get order by id', serializer_class())
 
     @swagger_auto_schema(responses={200: get_response})
-    @method_permission_classes([IsAdmin, IsManager, ])
+    @method_permission_classes([IsManager, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, pk, format=None):
         order = get_object_or_404(self.model_class, pk=pk)
@@ -253,7 +253,7 @@ class OrderDetail(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(request_body=OrderSerializer, responses={200: get_response})
-    @method_permission_classes([IsAdmin, IsManager, ])
+    @method_permission_classes([IsManager, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def put(self, request, pk, format=None):
         user = cookie_to_email(self, request)
@@ -270,7 +270,7 @@ class OrderDetail(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @method_permission_classes([IsAdmin, IsManager, ])
+    @method_permission_classes([IsManager, ])
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def delete(self, request, pk, format=None):
         order = get_object_or_404(self.model_class, pk=pk)
