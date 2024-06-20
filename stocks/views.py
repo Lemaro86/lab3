@@ -1,9 +1,17 @@
 import datetime
 
 from rest_framework.response import Response
-from rest_framework.permissions import AllowAny, IsAuthenticatedOrReadOnly, IsAuthenticated
+from rest_framework.permissions import (
+    AllowAny,
+    IsAuthenticatedOrReadOnly,
+    IsAuthenticated,
+)
 from rest_framework.views import APIView
-from rest_framework.decorators import api_view, permission_classes, authentication_classes
+from rest_framework.decorators import (
+    api_view,
+    permission_classes,
+    authentication_classes,
+)
 from rest_framework import viewsets
 from rest_framework.authentication import SessionAuthentication, BaseAuthentication
 from django.shortcuts import get_object_or_404
@@ -42,8 +50,8 @@ def method_permission_classes(classes):
 @permission_classes([AllowAny])
 @authentication_classes([])
 @csrf_exempt
-@swagger_auto_schema(method='post', request_body=UserSerializer)
-@api_view(['Post'])
+@swagger_auto_schema(method="post", request_body=UserSerializer)
+@api_view(["Post"])
 def login_view(request):
     email = request.data["email"]
     password = request.data["password"]
@@ -57,8 +65,9 @@ def login_view(request):
         serializer = UserRoleSerializer(user_item)
         response = Response(serializer.data)
         response["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response[
-            "Access-Control-Allow-Headers"] = 'Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, credentials'
+        response["Access-Control-Allow-Headers"] = (
+            "Access-Control-Allow-Headers, Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, credentials"
+        )
         response.set_cookie("session_id", random_key)
 
         return response
@@ -66,16 +75,16 @@ def login_view(request):
         return HttpResponse("{'status': 'error', 'error': 'login failed'}")
 
 
-@swagger_auto_schema(method='get')
-@api_view(['Get'])
+@swagger_auto_schema(method="get")
+@api_view(["Get"])
 @permission_classes([AllowAny])
 @authentication_classes([])
 def logout_view(request):
     logout(request._request)
-    response = Response({'status': 'Success'})
-    response.delete_cookie('session_id')
-    response.delete_cookie('sessionid')
-    response.delete_cookie('X-CSRF-Token')
+    response = Response({"status": "Success"})
+    response.delete_cookie("session_id")
+    response.delete_cookie("sessionid")
+    response.delete_cookie("X-CSRF-Token")
     return response
 
 
@@ -86,21 +95,26 @@ class UserViewSet(viewsets.ModelViewSet):
     model_class = CustomUser
 
     def create(self, request):
-        if self.model_class.objects.filter(email=request.data['email']).exists():
-            return Response({'status': 'Exist'}, status=400)
+        if self.model_class.objects.filter(email=request.data["email"]).exists():
+            return Response({"status": "Exist"}, status=400)
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
-            self.model_class.objects.create_user(email=serializer.data['email'],
-                                                 password=serializer.data['password'],
-                                                 is_superuser=serializer.data['is_superuser'],
-                                                 is_staff=serializer.data['is_staff'])
-            return Response({'status': 'Success'}, status=200)
-        return Response({'status': 'Error', 'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+            self.model_class.objects.create_user(
+                email=serializer.data["email"],
+                password=serializer.data["password"],
+                is_superuser=serializer.data["is_superuser"],
+                is_staff=serializer.data["is_staff"],
+            )
+            return Response({"status": "Success"}, status=200)
+        return Response(
+            {"status": "Error", "error": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     def get_permissions(self):
-        if self.action in ['create']:
+        if self.action in ["create"]:
             permission_classes = [AllowAny]
-        elif self.action in ['list']:
+        elif self.action in ["list"]:
             permission_classes = [IsAdmin, IsManager]
         else:
             permission_classes = [IsAdmin]
@@ -112,19 +126,44 @@ class ServiceList(APIView):
     model_class = Service
     serializer_class = ServiceSerializer
 
-    get_response = openapi.Response('Get service list', serializer_class(many=True))
+    get_response = openapi.Response("Get service list", serializer_class(many=True))
 
     @swagger_auto_schema(responses={200: get_response})
     def get(self, request, format=None):
-        title = request.GET.get('title')
-        if title and title != '':
+        title = request.GET.get("title")
+        if title and title != "":
             service = self.model_class.objects.filter(title__icontains=title)
         else:
             service = self.model_class.objects.all()
         serializer = self.serializer_class(service, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=ServiceSerializer, responses={200: ServiceSerializer})
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "pk": openapi.Schema(
+                    type=openapi.TYPE_NUMBER,
+                    description="Primary key?",
+                ),
+                "title": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Name of service",
+                ),
+                "description": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Desc of service",
+                ),
+                "cost": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Just price"
+                ),
+                "pic": openapi.Schema(type=openapi.TYPE_FILE, description="Image"),
+            },
+        ),
+        responses={200: ServiceSerializer},
+    )
+    @method_permission_classes((IsManager,))
+    @authentication_classes([SessionAuthentication, BaseAuthentication])
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
         if serializer.is_valid():
@@ -132,7 +171,7 @@ class ServiceList(APIView):
             service.save()
             pic = request.FILES.get("pic")
             pic_result = add_pic(service, pic)
-            if 'error' in pic_result.data:
+            if "error" in pic_result.data:
                 return pic_result
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -152,24 +191,28 @@ class ServiceDetail(APIView):
     @method_permission_classes((IsAdmin,))
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def put(self, request, pk, format=None):
-        if 'session_id' in request.COOKIES.keys():
+        if "session_id" in request.COOKIES.keys():
             ssid = request.COOKIES["session_id"]
             session = session_storage.get(ssid)
-            session_str = session.decode('utf-8')
+            session_str = session.decode("utf-8")
             user_info = CustomUser.objects.filter(email__contains=session_str)
             if user_info.exists() and user_info[0].is_superuser:
                 service = get_object_or_404(self.model_class, pk=pk)
-                serializer = self.serializer_class(service, data=request.data, partial=True)
-                if 'pic' in serializer.initial_data:
-                    pic_result = add_pic(service, serializer.initial_data['pic'])
-                    if 'error' in pic_result.data:
+                serializer = self.serializer_class(
+                    service, data=request.data, partial=True
+                )
+                if "pic" in serializer.initial_data:
+                    pic_result = add_pic(service, serializer.initial_data["pic"])
+                    if "error" in pic_result.data:
                         return pic_result
                 if serializer.is_valid():
                     serializer.save()
                     return Response(serializer.data)
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             else:
-                return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
+                return HttpResponse(
+                    "{'status': '401', 'error': 'cookies is not found'}"
+                )
         else:
             return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
 
@@ -181,10 +224,10 @@ class ServiceDetail(APIView):
 
 
 def cookie_to_email(self, request):
-    if 'session_id' in request.COOKIES.keys():
+    if "session_id" in request.COOKIES.keys():
         ssid = request.COOKIES["session_id"]
         session = session_storage.get(ssid)
-        session_str = session.decode('utf-8')
+        session_str = session.decode("utf-8")
         user = CustomUser.objects.filter(email__contains=session_str)
         if user.exists():
             return user[0]
@@ -198,33 +241,45 @@ class OrderList(APIView):
     permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
-    get_response = openapi.Response('Get order list', serializer_class(many=True))
-    get_response_one = openapi.Response('Get order', serializer_class(many=False))
+    get_response = openapi.Response("Get order list", serializer_class(many=True))
+    get_response_one = openapi.Response("Get order", serializer_class(many=False))
 
     @swagger_auto_schema(responses={200: get_response})
-    @method_permission_classes([IsUser, ])
+    @method_permission_classes(
+        [
+            IsUser,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, format=None):
         user = cookie_to_email(self, request)
         if user and (user.is_staff or user.is_superuser):
-            order = self.model_class.objects.all().order_by('created')
+            order = self.model_class.objects.all().order_by("created")
         else:
             order = self.model_class.objects.filter(creator_id=user.pk)
         serializer = self.serializer_class(order, many=True)
         return Response(serializer.data)
 
-    @swagger_auto_schema(request_body=openapi.Schema(
-        type=openapi.TYPE_OBJECT,
-        properties={
-            "status": openapi.Schema(
-                type=openapi.TYPE_STRING, description="ACTIVATED DRAFT COMPLETED DECLINED DELETED",
-            ),
-            "service_id": openapi.Schema(
-                type=openapi.TYPE_NUMBER, description="Primary key of service"
-            ),
-        },
-    ), responses={200: get_response_one})
-    @method_permission_classes([IsUser, ])
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "status": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="ACTIVATED DRAFT COMPLETED DECLINED DELETED",
+                ),
+                "service_id": openapi.Schema(
+                    type=openapi.TYPE_NUMBER, description="Primary key of service"
+                ),
+            },
+        ),
+        responses={200: get_response_one},
+    )
+    @method_permission_classes(
+        [
+            IsUser,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def post(self, request, format=None):
         user = cookie_to_email(self, request)
@@ -242,10 +297,14 @@ class OrderList(APIView):
 class OrderDetail(APIView):
     model_class = Order
     serializer_class = OrderSerializer
-    get_response = openapi.Response('Get order by id', serializer_class())
+    get_response = openapi.Response("Get order by id", serializer_class())
 
     @swagger_auto_schema(responses={200: get_response})
-    @method_permission_classes([IsManager, ])
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, pk, format=None):
         order = get_object_or_404(self.model_class, pk=pk)
@@ -253,7 +312,11 @@ class OrderDetail(APIView):
         return Response(serializer.data)
 
     @swagger_auto_schema(request_body=OrderSerializer, responses={200: get_response})
-    @method_permission_classes([IsManager, ])
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def put(self, request, pk, format=None):
         user = cookie_to_email(self, request)
@@ -265,12 +328,19 @@ class OrderDetail(APIView):
             start = datetime.datetime.now().replace(tzinfo=tz)
             if request.data["status"] == "activated":
                 serializer.save(moderator_id=moderator_id, activated=start)
-            elif request.data["status"] == "completed" or request.data["status"] == "declined":
+            elif (
+                request.data["status"] == "completed"
+                or request.data["status"] == "declined"
+            ):
                 serializer.save(completed=start)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @method_permission_classes([IsManager, ])
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def delete(self, request, pk, format=None):
         order = get_object_or_404(self.model_class, pk=pk)
