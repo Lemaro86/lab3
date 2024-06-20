@@ -35,6 +35,20 @@ from django.utils import timezone
 session_storage = redis.StrictRedis(host=settings.REDIS_HOST, port=settings.REDIS_PORT)
 
 
+def is_authorized(self, request):
+    if "session_id" in request.COOKIES.keys():
+        ssid = request.COOKIES["session_id"]
+        session = session_storage.get(ssid)
+        session_str = session.decode("utf-8")
+        user = CustomUser.objects.filter(email__contains=session_str)
+        if user.exists():
+            return True
+        else:
+            return False
+    else:
+        return False
+
+
 def method_permission_classes(classes):
     def decorator(func):
         def decorated_func(self, *args, **kwargs):
@@ -162,19 +176,27 @@ class ServiceList(APIView):
         ),
         responses={200: ServiceSerializer},
     )
-    @method_permission_classes((IsManager,))
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def post(self, request, format=None):
-        serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            service = serializer.save()
-            service.save()
-            pic = request.FILES.get("pic")
-            pic_result = add_pic(service, pic)
-            if "error" in pic_result.data:
-                return pic_result
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        isAuthed = is_authorized(self, request)
+        if isAuthed:
+            serializer = self.serializer_class(data=request.data)
+            if serializer.is_valid():
+                service = serializer.save()
+                service.save()
+                pic = request.FILES.get("pic")
+                pic_result = add_pic(service, pic)
+                if "error" in pic_result.data:
+                    return pic_result
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ServiceDetail(APIView):
@@ -216,11 +238,23 @@ class ServiceDetail(APIView):
         else:
             return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
 
-    @method_permission_classes((IsAdmin,))
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
+    @authentication_classes([SessionAuthentication, BaseAuthentication])
     def delete(self, request, pk, format=None):
-        service = get_object_or_404(self.model_class, pk=pk)
-        service.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        isAuthed = is_authorized(self, request)
+        if isAuthed:
+            service = get_object_or_404(self.model_class, pk=pk)
+            print("servkjbswjkhbsfkjbn", service)
+            service.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(
+                data="Cookie not found", status=status.HTTP_401_UNAUTHORIZED
+            )
 
 
 def cookie_to_email(self, request):
@@ -232,9 +266,11 @@ def cookie_to_email(self, request):
         if user.exists():
             return user[0]
         else:
-            return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
+            return Response(
+                data="Cookie not found", status=status.HTTP_401_UNAUTHORIZED
+            )
     else:
-        return HttpResponse("{'status': '401', 'error': 'cookies is not found'}")
+        return Response(data="Cookie not found", status=status.HTTP_401_UNAUTHORIZED)
 
 
 class OrderList(APIView):
@@ -295,6 +331,7 @@ class OrderList(APIView):
 
 
 class OrderDetail(APIView):
+    permission_classes = [IsAuthenticated]
     model_class = Order
     serializer_class = OrderSerializer
     get_response = openapi.Response("Get order by id", serializer_class())
@@ -307,9 +344,13 @@ class OrderDetail(APIView):
     )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def get(self, request, pk, format=None):
-        order = get_object_or_404(self.model_class, pk=pk)
-        serializer = self.serializer_class(order)
-        return Response(serializer.data)
+        isAuthed = is_authorized(self, request)
+        if isAuthed:
+            order = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(order)
+            return Response(serializer.data)
+        else:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
 
     @swagger_auto_schema(request_body=OrderSerializer, responses={200: get_response})
     @method_permission_classes(
@@ -343,6 +384,7 @@ class OrderDetail(APIView):
     )
     @authentication_classes([SessionAuthentication, BaseAuthentication])
     def delete(self, request, pk, format=None):
+        cookie_to_email(self, request)
         order = get_object_or_404(self.model_class, pk=pk)
         order.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)

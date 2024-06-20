@@ -9,7 +9,7 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ['email', 'password', 'is_staff', 'is_superuser']
+        fields = ["email", "password", "is_staff", "is_superuser"]
 
 
 class ServiceSerializer(serializers.ModelSerializer):
@@ -36,7 +36,16 @@ class OrderSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Order
-        fields = ["pk", "status", "created", "activated", "completed", "creator_id",  "moderator_id", "service"]
+        fields = [
+            "pk",
+            "status",
+            "created",
+            "activated",
+            "completed",
+            "creator_id",
+            "moderator_id",
+            "service",
+        ]
 
 
 class UserRoleSerializer(serializers.ModelSerializer):

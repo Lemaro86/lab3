@@ -94,11 +94,11 @@ WSGI_APPLICATION = 'lab3.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'student',
+        'NAME': 'student3',
         'USER': 'postgres',
-        'PASSWORD': 'fhsbfnfdbfb34',
+        'PASSWORD': '123456',
         'HOST': 'localhost',
-        'PORT': 5432,
+        'PORT': 5444,
     }
 }
 
