@@ -24,7 +24,7 @@ from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
 
 router = routers.DefaultRouter()
-router.register(r"user", views.UserViewSet, basename="user")
+# router.register(r"user", views.UserViewSet, basename="user")
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -42,6 +42,8 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path("api/", include(router.urls)),
+    path(r"user/", views.UserList.as_view(), name="user-list"),
+    path(r"user/<int:pk>/", views.UserDetails.as_view(), name="user-detail"),
     path(r"service/", views.ServiceList.as_view(), name="service-list"),
     path(r"service/<int:pk>/", views.ServiceDetail.as_view(), name="service-detail"),
     path(r"order/", views.OrderList.as_view(), name="order-list"),

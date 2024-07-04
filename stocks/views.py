@@ -86,7 +86,7 @@ def login_view(request):
 
         return response
     else:
-        return HttpResponse("{'status': 'error', 'error': 'login failed'}")
+        return Response(data="Ошибка авторизации", status=status.HTTP_403_FORBIDDEN)
 
 
 @swagger_auto_schema(method="get")
@@ -103,12 +103,35 @@ def logout_view(request):
 
 
 @permission_classes([AllowAny])
-class UserViewSet(viewsets.ModelViewSet):
+class UserList(APIView):
+    permission_classes = [IsAuthenticated]
     queryset = CustomUser.objects.all()
     serializer_class = UserSerializer
     model_class = CustomUser
+    get_response_one = openapi.Response("Get user", serializer_class(many=False))
 
-    def create(self, request):
+    @swagger_auto_schema(
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                "email": openapi.Schema(
+                    type=openapi.TYPE_STRING,
+                    description="Email",
+                ),
+                "password": openapi.Schema(
+                    type=openapi.TYPE_STRING, description="Password"
+                ),
+                "is_superuser": openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN, description="Is super"
+                ),
+                "is_staff": openapi.Schema(
+                    type=openapi.TYPE_BOOLEAN, description="Is staff"
+                ),
+            },
+        ),
+        responses={200: get_response_one},
+    )
+    def post(self, request):
         if self.model_class.objects.filter(email=request.data["email"]).exists():
             return Response({"status": "Exist"}, status=400)
         serializer = self.serializer_class(data=request.data)
@@ -125,14 +148,38 @@ class UserViewSet(viewsets.ModelViewSet):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    def get_permissions(self):
-        if self.action in ["create"]:
-            permission_classes = [AllowAny]
-        elif self.action in ["list"]:
-            permission_classes = [IsAdmin, IsManager]
+
+class UserDetails(APIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserSecureSerializer
+    model_class = CustomUser
+
+    @method_permission_classes(
+        [
+            IsManager,
+        ]
+    )
+    @authentication_classes([SessionAuthentication, BaseAuthentication])
+    def get(self, request, pk, format=None):
+        isAuthed = is_authorized(self, request)
+        if isAuthed:
+            user = get_object_or_404(self.model_class, pk=pk)
+            serializer = self.serializer_class(user)
+            return Response(serializer.data)
         else:
-            permission_classes = [IsAdmin]
-        return [permission() for permission in permission_classes]
+            return Response(
+                data="Cookie not found", status=status.HTTP_401_UNAUTHORIZED
+            )
+
+
+def get_permissions(self):
+    if self.action in ["create"]:
+        permission_classes = [AllowAny]
+    elif self.action in ["list"]:
+        permission_classes = [IsAdmin, IsManager]
+    else:
+        permission_classes = [IsAdmin]
+    return [permission() for permission in permission_classes]
 
 
 class ServiceList(APIView):
@@ -339,7 +386,7 @@ class OrderDetail(APIView):
     @swagger_auto_schema(responses={200: get_response})
     @method_permission_classes(
         [
-            IsManager,
+            IsUser,
         ]
     )
     @authentication_classes([SessionAuthentication, BaseAuthentication])

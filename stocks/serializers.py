@@ -12,6 +12,15 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["email", "password", "is_staff", "is_superuser"]
 
 
+class UserSecureSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(default=False, required=False)
+    is_superuser = serializers.BooleanField(default=False, required=False)
+
+    class Meta:
+        model = CustomUser
+        fields = ["is_staff", "is_superuser"]
+
+
 class ServiceSerializer(serializers.ModelSerializer):
     class Meta:
         model = Service
